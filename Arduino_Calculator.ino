@@ -1,3 +1,12 @@
+// To do:
+// weather station
+// complex calculator
+// bulls and cows 5 digits
+
+// To do:
+// infix to postfix
+// more buttons
+
 // I wish that I could use python...
 #include <Arduino.h>
 #include <Adafruit_GFX.h>    // Core graphics library
@@ -57,6 +66,19 @@ char button[4][4] = {
     { '1', '2', '3', '-' },
     { 'C', '0', '=', '+' }
 };
+int tones[4][4] = {
+    { 392, 440, 494, 523 },
+    { 440, 494, 587, 659 },
+    { 392, 440, 494, 523 },
+    { 440, 494, 587, 659 }
+};
+int tonsse[10] = {
+    261, 294, 330, 349, 392, 440, 494, 523, 587, 659
+};
+int tonetel[10] = {
+    190, 173, 674, 715, 401, 191, 753, 172, 444, 212
+};
+// # 
 
 int priority(char op) {
     if (op == '+' || op == '-') return 1;
@@ -96,6 +118,7 @@ void draw() {
 void setup(){
     key1 = "";
     key2 = "";
+    formula = "";
     pinMode(BL_LED, OUTPUT);
     digitalWrite(BL_LED, HIGH);
     Serial.begin(9600);
@@ -129,6 +152,7 @@ void loop(){
 
         //If input is number
         if (lastchar >= '0' && lastchar <= '9' && !toLong){
+            tone(D1, tonsse[lastchar - '0']);
             //If input is digitr & operation is not defined
             if (operation == ' '){
                 key1 += lastchar;
@@ -221,6 +245,7 @@ void loop(){
         //wait for release
         while (ts.touched()) {delay(10);};
         beentouched = false;
+        noTone(D1);
         }
     }
 
