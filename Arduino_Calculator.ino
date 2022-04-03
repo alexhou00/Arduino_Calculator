@@ -5,6 +5,7 @@
 
 // To do:
 // infix to postfix
+// Orange until released
 // more buttons
 
 // I wish that I could use python...
@@ -14,8 +15,13 @@
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <stack>
+
+//#include <stack>
 #include <string>
+#include <vector>
+#include <math.h>
+//#include <ArduinoSTL.h>
+
 using namespace std;
 
 #define TOUCH_CS_PIN D3
@@ -40,10 +46,12 @@ static uint8_t SD3 = 10;
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 long int answer = 0;
+string answer2 = "";
 char lastchar = ' ';
 String key1;
 String key2;
-String formula;
+vector<string> formula;
+String cur_key;
 int key1i = 0;
 int key2i = 0;
 char operation = ' ';
@@ -118,7 +126,8 @@ void draw() {
 void setup(){
     key1 = "";
     key2 = "";
-    formula = "";
+    vector<string> formula;
+    cur_key = "";
     pinMode(BL_LED, OUTPUT);
     digitalWrite(BL_LED, HIGH);
     Serial.begin(9600);
@@ -137,7 +146,13 @@ void loop(){
             draw();
         }
         
-        if(key1.length()+key2.length()+int(operation != ' ') > 16){
+        /*if(key1.length()+key2.length()+int(operation != ' ') > 16){
+            toLong = true;
+        }*/
+        int lenFormula = 0;
+        for (auto i : formula)
+            lenFormula += i.length();
+        if (lenFormula > 16){
             toLong = true;
         }
         
@@ -152,9 +167,14 @@ void loop(){
 
         //If input is number
         if (lastchar >= '0' && lastchar <= '9' && !toLong){
-            tone(D1, tonsse[lastchar - '0']);
+            // tone(D1, tonetel[lastchar - '0']); # TONE HERE <<<<<<<<<<<<<<<<<<<<<<<<<
+            // Uncomment above line if you want tone
             //If input is digitr & operation is not defined
-            if (operation == ' '){
+            cur_key += lastchar;
+            tft.print(lastchar);
+            Serial.println(cur_key);
+            operation = ' ';
+            /*if (operation == ' '){
                 key1 += lastchar;
                 tft.print(lastchar);
                 Serial.println(key1);
@@ -164,11 +184,11 @@ void loop(){
                 key2 += lastchar;
                 tft.print(lastchar);
                 Serial.println(key2);
-            }
+            }*/
         }
 
         //If input is an operator
-        if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x') && key2 == "" && key1 != "" && !toLong){
+        /*if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x') && key2 == "" && key1 != "" && !toLong){
             if ( operation != ' ') {
                 operation = lastchar;
                 tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
@@ -184,16 +204,27 @@ void loop(){
                 tft.print(operation);
 
             }
+        }*/
+        if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x') && !toLong){
+            formula.push_back(cur_key.c_str());
+            cur_key = "";
+            operation = lastchar;
+            tft.print(operation);
+            string operation_str;
+            operation_str.push_back(operation);
+            formula.push_back(operation_str);
         }
 
         //If input is equal
         if (lastchar == '='){
             //If neither key1 or key2 are empty
-            if (key1 != "" && key2 != ""){
+            //if (key1 != "" && key2 != ""){
+            if (formula.size()){
+                formula.push_back(cur_key.c_str());
                 equaled = true;
                 Serial.println("Calculate");
                 //Check devide by zero error
-                if (key2.toInt() == 0 && operation == '/'){
+                /*if (key2.toInt() == 0 && operation == '/'){
                     tft.setCursor(4, 12);
                     tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
                     tft.drawRoundRect(0, 0, 320, 48, 8, ILI9341_ORANGE);
@@ -203,36 +234,42 @@ void loop(){
                     tft.setTextColor(ILI9341_WHITE);
                     key1 = "";
                     key2 = "";
+                    formula = "";
+                    cur_key = "";
                     operation = ' ';
-                }
-                else {
-                    key1i = 0;
+                }*/
+                //else {
+                    /*key1i = 0;
                     key2i = 0;
                     key1i = key1.toInt();
-                    key2i = key2.toInt();
-                    answer = calc(key1i, key2i, operation);
+                    key2i = key2.toInt();*/
+                    //answer = calc(key1i, key2i, operation);
+                answer2 = calc_stk(formula);
 
-                    tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
-                    tft.drawRoundRect(0, 0, 320, 48, 8, ILI9341_ORANGE);
-                    tft.setCursor(4, 12);
+                tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
+                tft.drawRoundRect(0, 0, 320, 48, 8, ILI9341_ORANGE);
+                tft.setCursor(4, 12);
                     //tft.print('=');
-                    tft.print(answer);
-                    key1i = 0;
-                    key2i = 0;
-                    operation = ' ';
-                    key1 = "";
-                    key2 = "";
-                }
+                tft.print(answer);
+                    /*key1i = 0;
+                    key2i = 0;*/
+                operation = ' ';
+                    /*key1 = "";
+                    key2 = "";*/
+                cur_key = "";
+                formula.clear();
+                //}
             }
         }
 
         if (lastchar == 'C') {
-            key1 = "";
-            key2 = "";
+            /*key1 = "";
+            key2 = "";*/
+            formula.clear();
             answer = 0;
 
-            key1i = 0;
-            key2i = 0;
+            /*key1i = 0;
+            key2i = 0;*/
 
             operation = ' ';
             draw();
@@ -396,4 +433,60 @@ long int calc(long int num1, long int num2, char op){
         case '/':
         return num1 / num2;
     }
+}
+
+string calc_stk(vector<string> formula){
+    vector<string> stk;
+    vector<string> postfix;
+    char operators[5] = {'+', '-', '*', '/'};
+    Serial.println("Ready to Calculate");
+    Serial.println("Formula is");
+    for (string s : formula){
+        Serial.println(s.c_str());
+    }
+    for (string s : formula){
+        Serial.print("Processing ");
+        Serial.println(s.c_str());
+        if (s[0] == '('){
+            stk.push_back(s);
+        }
+        else if (s[0] == ')'){
+            while (stk.size() && stk.back()[0]!='('){
+                postfix.push_back(stk.back());
+                stk.pop_back();
+            }
+            if (stk.size()){
+                if (stk.back()[0]=='(') stk.back();
+            }
+        }
+        else if (s.length() == 1 && !isdigit(s[0])){
+            for (auto op : operators){
+                if (s[0] == op){
+                    while (stk.size() && priority(op)<=priority(stk.back()[0])){
+                        postfix.push_back(stk.back());
+                        stk.pop_back();
+                    }
+                    stk.push_back(s);
+                }
+            }
+        }
+        else{
+            postfix.push_back(stk.back());
+        }
+        /*if (s.length() == 1){
+            for (auto op : operators){
+                if (s[0] == op){
+                    stk.push(s);
+                }
+                else{
+                    stk.push(s);
+                }
+                break;
+            }
+        }
+        else{
+            stk.push(s);
+        }*/
+    }
+
 }
