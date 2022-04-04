@@ -1,10 +1,14 @@
 // To do:
 // weather station
 // complex calculator
-// bulls and cows 5 digits
+// bulls and cows 5 digits maybe wordle (?)
 
 // To do:
-// infix to postfix
+// infix to postfix ... done
+// postfix calculations ... done
+// decimal division
+// divide by zero error 
+// catch other errors
 // Orange until released
 // more buttons
 
@@ -90,7 +94,7 @@ int tonetel[10] = {
 
 int priority(char op) {
     if (op == '+' || op == '-') return 1;
-    else if (op == '*' || op == '/') return 2;
+    else if (op == 'x' || op == '/') return 2;
     else if (op == '(') return 0;
 }
 
@@ -244,12 +248,16 @@ void loop(){
                     key1i = key1.toInt();
                     key2i = key2.toInt();*/
                     //answer = calc(key1i, key2i, operation);
-                answer2 = calc_stk(formula);
-
+                //answer2 = calc_stk(formula);
+                answer = calc_stk(formula);
+                Serial.print("answer: ");
+                //Serial.println(answer2.c_str());
+                Serial.println(answer);
                 tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
                 tft.drawRoundRect(0, 0, 320, 48, 8, ILI9341_ORANGE);
                 tft.setCursor(4, 12);
                     //tft.print('=');
+                //tft.print(answer2.c_str());
                 tft.print(answer);
                     /*key1i = 0;
                     key2i = 0;*/
@@ -266,6 +274,7 @@ void loop(){
             /*key1 = "";
             key2 = "";*/
             formula.clear();
+            answer2 = "";
             answer = 0;
 
             /*key1i = 0;
@@ -273,6 +282,7 @@ void loop(){
 
             operation = ' ';
             draw();
+            equaled = false;
             tft.fillRoundRect(0, 0, 320, 48, 8, ILI9341_BLACK);
             tft.drawRoundRect(0, 0, 320, 48, 8, ILI9341_ORANGE);
             tft.setCursor(4, 12);
@@ -435,10 +445,19 @@ long int calc(long int num1, long int num2, char op){
     }
 }
 
-string calc_stk(vector<string> formula){
-    vector<string> stk;
+long int calc_stk(vector<string> formula){
+    vector<string> stk; // actually stack
     vector<string> postfix;
-    char operators[5] = {'+', '-', '*', '/'};
+    string postfix_str = "";
+    char operators[5] = {'+', '-', 'x', '/'};
+    /*
+    *   Prefix to Postfix conversion
+    *                       stk
+    *   postfix:_______    |   |   formula:____
+    *                 ^    |   |    |
+    *                 |    |   |  <--
+    *                  --  -----
+    */
     Serial.println("Ready to Calculate");
     Serial.println("Formula is");
     for (string s : formula){
@@ -464,15 +483,22 @@ string calc_stk(vector<string> formula){
                 if (s[0] == op){
                     while (stk.size() && priority(op)<=priority(stk.back()[0])){
                         postfix.push_back(stk.back());
+                        Serial.print("postfix push back ");
+                        Serial.println(stk.back().c_str());
                         stk.pop_back();
                     }
                     stk.push_back(s);
+                    Serial.print("stk push ");
+                    Serial.println(s.c_str());
                 }
             }
         }
         else{
-            postfix.push_back(stk.back());
+            postfix.push_back(s);
+            Serial.print("postfix push back ");
+            Serial.println(s.c_str());
         }
+        
         /*if (s.length() == 1){
             for (auto op : operators){
                 if (s[0] == op){
@@ -488,5 +514,37 @@ string calc_stk(vector<string> formula){
             stk.push(s);
         }*/
     }
-
+    while (stk.size()) {
+        postfix.push_back(stk.back());
+        stk.pop_back();
+    }
+    Serial.println("postfix now is ");
+    for (auto s : postfix){
+        postfix_str += s;
+        Serial.println(postfix_str.c_str());
+    }
+    /*
+    * Calculate postfix
+    *
+    */
+    long int num1, num2;
+    long int result = 0;
+    for (auto s : postfix){
+        if (isdigit(s[0])){
+            result = atoi(s.c_str());
+            Serial.print("result is ");
+            Serial.println(result);
+        }
+        else{
+            num2 = atoi(stk.back().c_str());
+            stk.pop_back();
+            num1 = atoi(stk.back().c_str());
+            stk.pop_back();
+            result = calc(num1, num2, s[0]);
+            Serial.print("result is ");
+            Serial.println(result);
+        }
+        stk.push_back(to_string(result));
+    }
+    return result;
 }
