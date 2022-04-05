@@ -12,8 +12,9 @@
 // divide by zero error ... done
 // bigger number layout
 // negative numbers ... done
+// brackets ... done
 // catch other errors like //
-// Orange until released
+// Orange until released ... done
 // continuous calculations
 // more buttons
 // overflow preventions
@@ -60,7 +61,8 @@ string answer_str = "";
 char lastchar = ' ';
 string laststring = " ";
 vector<string> formula;
-String cur_key;
+string cur_key;
+string onScreenStr = "";
 char operation = ' ';
 bool beentouched = false;
 bool tooLong = false;
@@ -73,6 +75,8 @@ bool equaled = false;
 #define extraY 48+4*8-1
 
 #define PRINT(name) printSerial(#name, (name))
+#define DEBUG true 
+
 
 int x, y = 0;
 
@@ -187,6 +191,11 @@ void draw() {
     tft.setCursor(4,12);
 }
 
+void drawFormulaScreen(){
+    tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
+    tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
+}
+
 void setup(){
     //key1 = "";
     //key2 = "";
@@ -195,7 +204,7 @@ void setup(){
     pinMode(BL_LED, OUTPUT);
     digitalWrite(BL_LED, HIGH);
     Serial.begin(9600);
-    Serial.println("Calculator Start");
+    if (DEBUG) Serial.println("Calculator Start");
     ts.begin();
     tft.begin();
     tft.setRotation(3);
@@ -216,7 +225,7 @@ void loop(){
             lenFormula += i.length();
         if (lenFormula > 16){
             tooLong = true;
-            Serial.println("Too long");
+            if (DEBUG) Serial.println("Too long");
         }
         
         TS_Point p = ts.getPoint();     // Read touchscreen
@@ -237,8 +246,9 @@ void loop(){
             cur_key += lastchar;
             tft.setTextSize(3);
             tft.print(lastchar);
-            Serial.print("pressed ");
-            Serial.println(cur_key);
+            onScreenStr += lastchar;
+            if (DEBUG) Serial.print("pressed ");
+            if (DEBUG) Serial.println(cur_key.c_str());
             operation = ' ';
         }
 
@@ -254,17 +264,19 @@ void loop(){
                 cur_key += lastchar;
                 tft.setTextSize(3);
                 tft.print(lastchar);
+                onScreenStr += lastchar;
             }
             else{
                 operation = lastchar;
                 tft.setTextSize(3);
                 tft.print(operation);
+                onScreenStr += operation;
                 string operation_str;
                 operation_str.push_back(operation);
                 formula.push_back(operation_str);
             }
-            Serial.print("pressed ");
-            Serial.println(operation);
+            if (DEBUG) Serial.print("pressed ");
+            if (DEBUG) Serial.println(operation);
         }
 
         if ((lastchar == '(' || lastchar == ')') && !tooLong){
@@ -273,8 +285,9 @@ void loop(){
             cur_key = "";
             tft.setTextSize(3);
             tft.print(lastchar);
-            Serial.print("pressed ");
-            Serial.println(lastchar);
+            onScreenStr += lastchar;
+            if (DEBUG) Serial.print("pressed ");
+            if (DEBUG) Serial.println(lastchar);
         }
 
         //If input is equal
@@ -282,14 +295,15 @@ void loop(){
             if (formula.size()){
                 formula.push_back(cur_key.c_str());
                 equaled = true;
-                Serial.println("pressed Equal");
+                if (DEBUG) Serial.println("pressed Equal");
                 answer_str = calc_stk(formula);
                 //answer = calc_stk(formula);
-                Serial.print("answer: ");
-                Serial.println(answer_str.c_str());
-                //Serial.println(answer);
-                tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
-                tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
+                if (DEBUG) Serial.print("answer: ");
+                if (DEBUG) Serial.println(answer_str.c_str());
+                //if (DEBUG) Serial.println(answer);
+                drawFormulaScreen();
+                //tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
+                //tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
                 tft.setCursor(4, 12);
                 //tft.print('=');
                 if (answer_str == "undefined") {
@@ -300,6 +314,7 @@ void loop(){
                 }
                 else {
                     tft.print(answer_str.c_str());
+                    onScreenStr += answer_str;
                     tft.setTextSize(3);
                 }
                 //tft.print(answer);
@@ -316,12 +331,35 @@ void loop(){
             answer = 0;
             cur_key = "";
             operation = ' ';
+            onScreenStr = "";
             draw();
             equaled = false;
-            tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
-            tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
+            drawFormulaScreen();
+            //tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
+            //tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
             tft.setCursor(4, 12);
             tooLong = false;
+        }
+        if (laststring == "<-") {
+            PRINT(formula);if (DEBUG) Serial.println("\n"); // debug
+            if (onScreenStr.length() > 0) {
+                onScreenStr = onScreenStr.substr(0, onScreenStr.length() - 1);
+            }
+            if (cur_key.length() > 0) {
+                cur_key = cur_key.substr(0, cur_key.length() - 1);
+            }
+            else if (formula.back()== "+" || formula.back()== "-" || formula.back()== "x" || formula.back()== "/") {
+                operation = ' ';
+                formula.pop_back();
+            }
+            else{
+                cur_key = formula.back();
+                formula.pop_back();
+            }
+            // equaled = false;
+            tft.setCursor(4, 12);
+            drawFormulaScreen();
+            tft.print(onScreenStr.c_str());
         }
 
         //wait for release
@@ -335,7 +373,7 @@ string idbutton(){
   //Column 4 identification
   if ((x>= boxsize * 3) && (x <= boxsize * 4))
   {
-    //    Serial.println("Row 1  ");
+    //    if (DEBUG) Serial.println("Row 1  ");
     //7
     if (((extraY + boxsize) >= y) && (y >= extraY)) {
         tft.drawRoundRect(row1x + boxsize*3, extraY, boxsize, boxsize, 8, ILI9341_RED);
@@ -373,7 +411,7 @@ string idbutton(){
 
   //Column 5 identification
   if ((x>=boxsize * 4) && (x <= (boxsize * 5))) {
-    //    Serial.println("Row 2  ");
+    //    if (DEBUG) Serial.println("Row 2  ");
     //8
     if (((extraY + boxsize) >= y) && (y >= extraY)) {
         tft.drawRoundRect(row1x + boxsize*4, extraY, boxsize, boxsize, 8, ILI9341_RED);
@@ -410,7 +448,7 @@ string idbutton(){
 
   //Column 6 identification
   if ((x>=(boxsize * 5)) && (x <= (boxsize * 6))){
-    //    Serial.println("Row 3  ");
+    //    if (DEBUG) Serial.println("Row 3  ");
     //9
       if (((extraY + boxsize) >= y) && (y >= extraY)) {
         tft.drawRoundRect(row1x + boxsize * 5, extraY, boxsize, boxsize, 8, ILI9341_RED);
@@ -447,7 +485,7 @@ string idbutton(){
 
   //Column 7 identification
   if ((x>=(boxsize * 6)) && (x <= (boxsize * 7))) {
-        //    Serial.println("Row 4  ");
+        //    if (DEBUG) Serial.println("Row 4  ");
         //+
         if (((extraY + boxsize) >= y) && (y >= extraY)){
             tft.drawRoundRect(row1x + boxsize * 6, extraY, boxsize, boxsize, 8, ILI9341_GREEN);
@@ -484,7 +522,7 @@ string idbutton(){
     
     //Column 8 identification
     if ((x>=(boxsize * 7)) && (x <= (boxsize * 8))) {
-        //    Serial.println("Row 4  ");
+        //    if (DEBUG) Serial.println("Row 4  ");
         //+
         if (((extraY + boxsize) >= y) && (y >= extraY)){
             tft.drawRoundRect(row1x + boxsize * 7, extraY, boxsize, boxsize, 8, ILI9341_GREEN);
@@ -561,15 +599,15 @@ number calc(long int num1, long int num2, char op){
 
 
 void printSerial(char *name, auto &iterable){
-    Serial.print(name);
-    Serial.print(": ");
+    if (DEBUG) Serial.print(name);
+    if (DEBUG) Serial.print(": ");
     for (auto i : iterable){
-        Serial.print(i.c_str());
-        Serial.print(" ");
+        if (DEBUG) Serial.print(i.c_str());
+        if (DEBUG) Serial.print(" ");
     }
-    Serial.print("  size: ");
-    Serial.print(iterable.size());
-    Serial.println();
+    if (DEBUG) Serial.print("  size: ");
+    if (DEBUG) Serial.print(iterable.size());
+    if (DEBUG) Serial.println();
 }
 
 
@@ -586,14 +624,14 @@ string calc_stk(vector<string> formula){
     *                 |    |   |  <--
     *                  --  -----
     */
-    Serial.println("Ready to Calculate");
-    PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+    if (DEBUG) Serial.println("Ready to Calculate");
+    PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
     for (string s : formula){
-        Serial.print("Processing ");
-        Serial.println(s.c_str());
+        if (DEBUG) Serial.print("Processing ");
+        if (DEBUG) Serial.println(s.c_str());
         if (s[0] == '('){
             stk.push_back(s);
-            PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+            PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
         }
         else if (s[0] == ')'){
             while (stk.size() && stk.back()[0]!='('){
@@ -609,20 +647,20 @@ string calc_stk(vector<string> formula){
                 if (s[0] == op){
                     while (stk.size() && priority(op)<=priority(stk.back()[0])){
                         postfix.push_back(stk.back());
-                        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
-                        //Serial.print("postfix push back ");
-                        //Serial.println(stk.back().c_str());
+                        PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
+                        //if (DEBUG) Serial.print("postfix push back ");
+                        //if (DEBUG) Serial.println(stk.back().c_str());
                         stk.pop_back();
-                        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+                        PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
                     }
                     stk.push_back(s);
-                    PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+                    PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
                 }
             }
         }
         else if (s != ""){
             postfix.push_back(s);
-            PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+            PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
         }
         
         /*if (s.length() == 1){
@@ -643,7 +681,7 @@ string calc_stk(vector<string> formula){
     while (stk.size()) {
         postfix.push_back(stk.back());
         stk.pop_back();
-        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+        PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
     }
     /*
     * Calculate postfix
@@ -654,11 +692,11 @@ string calc_stk(vector<string> formula){
     result.num = 0;
     string result_str = "";
     for (auto s : postfix){
-        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+        PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
         if (isdigit(s[0]) || (s.length()>1 && s[0] == '-' && isdigit(s[1]))){
             result.num = atoi(s.c_str());
-            //Serial.print("result is ");
-            //Serial.print(result);println(result.num);
+            //if (DEBUG) Serial.print("result is ");
+            //if (DEBUG) Serial.print(result);println(result.num);
         }
         else{
             char c = stk.back()[0];
@@ -670,9 +708,9 @@ string calc_stk(vector<string> formula){
             }
             else num1 = 0;
             result = calc(num1, num2, s[0]);
-            /*Serial.print("result in int is ");
-            Serial.println(result.num);
-            if (result.remainder != 0) Serial.println(result.remainder);*/
+            /*if (DEBUG) Serial.print("result in int is ");
+            if (DEBUG) Serial.println(result.num);
+            if (result.remainder != 0) if (DEBUG) Serial.println(result.remainder);*/
         }
         if (result.remainder){
             long gcd_ = gcd(result.remainder, result.divisor);
