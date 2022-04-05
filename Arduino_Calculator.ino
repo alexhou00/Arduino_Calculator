@@ -15,6 +15,8 @@
 // brackets ... done
 // catch other errors like //
 // Orange until released ... done
+// factorial ... done
+// exponent ... done
 // continuous calculations
 // more buttons
 // overflow preventions
@@ -27,6 +29,7 @@
 #include <SPI.h>
 #include <Wire.h>
 
+//include new libraries
 #include <string>
 #include <vector>
 #include <math.h>
@@ -56,6 +59,7 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 // String: Arduino String() object
 // string: std::string
+
 long int answer = 0;
 string answer_str = "";
 char lastchar = ' ';
@@ -87,24 +91,15 @@ struct number{
     bool undefined = false;
 };
 
-/*char button[4][4] = {
-    { '7', '8', '9', '/' },
-    { '4', '5', '6', 'x' },
-    { '1', '2', '3', '-' },
-    { 'C', '0', '=', '+' }
-};
-char buttons[4][6] = {
-    { '7', '8', '9', '/', 'C' },
-    { '4', '5', '6', 'x', '(', ')' },
-    { '1', '2', '3', '-', '<-' },
-    { '0', '.', 'Ans', '+', '=' }
-};*/
+
 String button[4][8] = {
     { "-", "-", "-", "7", "8", "9", "/", "C" },
     { "4", "5", "n!", "4", "5", "6", "x"},
     { "1", "2", "^", "1", "2", "3", "-", "<-" },
     { "0", ".", "", "0", ".", "Ans", "+", "=" }
 };
+
+//piano tones
 /*int tones[4][4] = {
     { 392, 440, 494, 523 },
     { 440, 494, 587, 659 },
@@ -114,11 +109,12 @@ String button[4][8] = {
 /*int tonepitch[10] = {
     261, 294, 330, 349, 392, 440, 494, 523, 587, 659
 };*/
+//telephone tones
 int tonetel[10] = {
     190, 173, 674, 715, 401, 191, 753, 172, 444, 212
 };
 
-
+// operators priority
 int priority(char op) {
     if (op == '+' || op == '-') return 1;
     else if (op == 'x' || op == '/') return 2;
@@ -140,7 +136,7 @@ void draw() {
         for (int i=0;i<8;i++) {
             if (i!=7 || j!=1){
                 tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
-                tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1), extraY+j*boxsize+9+6*(button[j][i].length()>1));
+                tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1)+6*(button[j][i].length()==2), extraY+j*boxsize+9+6*(button[j][i].length()>1));
                 tft.setTextColor(ILI9341_WHITE);
                 tft.setTextSize(3-(button[j][i].length()>1));
                 tft.print(button[j][i]);
@@ -161,7 +157,7 @@ void draw() {
     }
     for (int yee=0;yee<4;yee++)
         tft.drawRoundRect(row1x + boxsize * 6, extraY+boxsize*yee, boxsize, boxsize, 8, ILI9341_BLUE);
-    tft.drawRoundRect(row1x + boxsize * 7, extraY, boxsize, boxsize, 8, ILI9341_RED);
+    tft.drawRoundRect(row1x + boxsize * 7, extraY, boxsize, boxsize, 8, ILI9341_RED); //C
     //tft.drawRoundRect(row1x + boxsize * 7, extraY+boxsize, boxsize/2, boxsize, 8, ILI9341_BLUE);
     //tft.drawRoundRect(row1x + boxsize * 7.5, extraY+boxsize, boxsize/2, boxsize, 8, ILI9341_BLUE);
     tft.drawRoundRect(row1x + boxsize * 7, extraY+boxsize*2, boxsize, boxsize, 8, ILI9341_BLUE);
@@ -255,8 +251,9 @@ void loop(){
         }
 
         //If input is an operator
-        if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x' || lastchar =='!') && !tooLong){
-            if ((!formula.size()) || (formula.size() && !(formula.back()=="(" && (lastchar == '-' || lastchar == '+'))) ) {
+        if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x' || lastchar =='!' || lastchar =='^') && !tooLong){
+            //                                           if (formula is not empty and )
+            if ((!formula.size()) || (formula.size() && !(formula.back()=="(" && cur_key == "" && (lastchar == '-' || lastchar == '+'))) ) {
                 formula.push_back(cur_key.c_str()); // push the number
                 cur_key = "";
             }
@@ -350,7 +347,7 @@ void loop(){
             if (cur_key.length() > 0) {
                 cur_key = cur_key.substr(0, cur_key.length() - 1);
             }
-            else if (formula.back()== "+" || formula.back()== "-" || formula.back()== "x" || formula.back()== "/") {
+            else if (formula.back()== "+" || formula.back()== "-" || formula.back()== "x" || formula.back()== "/" || formula.back()== "^" || formula.back()== "!") {
                 operation = ' ';
                 formula.pop_back();
             }
@@ -643,6 +640,10 @@ number calc(long int num1, long int num2, char op){
             if (DEBUG) Serial.println("Factorial");
             tmp.num = factorial(num2);
             return tmp;
+        case '^':
+            if (DEBUG) Serial.println("Exponent");
+            tmp.num = pow(num1, num2);
+            return tmp;
     }
 }
 
@@ -664,7 +665,7 @@ string calc_stk(vector<string> formula){
     vector<string> stk; // actually stack
     vector<string> postfix;
     string postfix_str = "";
-    char operators[6] = {'+', '-', 'x', '/', '_', '!'};
+    char operators[7] = {'+', '-', 'x', '/', '_', '!', '^'};
     /*
     *   infix to Postfix conversion
     *                       stk
@@ -738,7 +739,7 @@ string calc_stk(vector<string> formula){
             num2 = atoi(stk.back().c_str());
             stk.pop_back();
             if (DEBUG) Serial.println("stk fetched and popped");
-            if (s[0] != '!'){ 
+            if (s[0] != '!'){ // single operand operator
                 num1 = atoi(stk.back().c_str());
                 stk.pop_back();
                 if (DEBUG) Serial.println("stk fetched and popped");
