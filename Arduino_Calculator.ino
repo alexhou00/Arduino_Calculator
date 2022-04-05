@@ -53,9 +53,12 @@ static uint8_t SD3 = 10;
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
+// String: Arduino String() object
+// string: std::string
 long int answer = 0;
 string answer_str = "";
 char lastchar = ' ';
+string laststring = " ";
 vector<string> formula;
 String cur_key;
 char operation = ' ';
@@ -131,7 +134,7 @@ void draw() {
         for (int i=0;i<8;i++) {
             if (i!=7 || j!=1){
                 tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
-                tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1), extraY+j*boxsize+9+2*(button[j][i].length()>1));
+                tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1), extraY+j*boxsize+9+6*(button[j][i].length()>1));
                 tft.setTextColor(ILI9341_WHITE);
                 tft.setTextSize(3-(button[j][i].length()>1));
                 tft.print(button[j][i]);
@@ -209,10 +212,11 @@ void loop(){
         
 
         int lenFormula = 0;
-        for (auto i : formula)
+        for (string i : formula)
             lenFormula += i.length();
         if (lenFormula > 16){
             tooLong = true;
+            Serial.println("Too long");
         }
         
         TS_Point p = ts.getPoint();     // Read touchscreen
@@ -221,8 +225,10 @@ void loop(){
         x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
         y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
 
+        laststring = " ";
         lastchar = ' ';
-        lastchar = idbutton();
+        laststring = idbutton();
+        lastchar = laststring[0];
 
         //If input is number
         if (lastchar >= '0' && lastchar <= '9' && !tooLong){
@@ -238,9 +244,12 @@ void loop(){
 
         //If input is an operator
         if ((lastchar == '+' || lastchar == '-' || lastchar == '/' || lastchar == 'x') && !tooLong){
-            formula.push_back(cur_key.c_str()); // push the number
-            cur_key = "";
-            if (formula.size()==0 && (lastchar == '-' || lastchar == '+')) {
+            if ((!formula.size()) || (formula.size() && !(formula.back()=="(" && (lastchar == '-' || lastchar == '+'))) ) {
+                formula.push_back(cur_key.c_str()); // push the number
+                cur_key = "";
+            }
+            // Handling negative numbers at first
+            if ((formula.size()==0 || formula.back()=="(") && (lastchar == '-' || lastchar == '+')) {
                 operation = ' ';
                 cur_key += lastchar;
                 tft.setTextSize(3);
@@ -256,6 +265,16 @@ void loop(){
             }
             Serial.print("pressed ");
             Serial.println(operation);
+        }
+
+        if ((lastchar == '(' || lastchar == ')') && !tooLong){
+            if (cur_key != "") formula.push_back(cur_key.c_str()); // push the number
+            formula.push_back(laststring);
+            cur_key = "";
+            tft.setTextSize(3);
+            tft.print(lastchar);
+            Serial.print("pressed ");
+            Serial.println(lastchar);
         }
 
         //If input is equal
@@ -292,12 +311,10 @@ void loop(){
         }
 
         if (lastchar == 'C') {
-            
             formula.clear();
             answer_str = "";
             answer = 0;
-
-
+            cur_key = "";
             operation = ' ';
             draw();
             equaled = false;
@@ -314,7 +331,7 @@ void loop(){
         }
     }
 
-char idbutton(){
+string idbutton(){
   //Column 4 identification
   if ((x>= boxsize * 3) && (x <= boxsize * 4))
   {
@@ -325,7 +342,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*3, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '7';
+        return "7";
     }
     //4
     if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
@@ -333,7 +350,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*3, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '4';
+        return "4";
     }
     //1
     if (((extraY + (boxsize * 3)) >= y) && (y >= (extraY + (boxsize * 2)))) {
@@ -341,7 +358,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*3, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '1';
+        return "1";
     }
     //C
     if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))) {
@@ -349,7 +366,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*3, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_RED);
-        return '0';
+        return "0";
     }
 
   }
@@ -363,7 +380,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*4, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '8';
+        return "8";
     }
     //5
     if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
@@ -371,7 +388,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*4, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '5';
+        return "5";
     }
     //2
     if (((extraY + (boxsize * 3)) >= y) && (y >= (extraY + (boxsize * 2)))) {
@@ -379,7 +396,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*4, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '2';
+        return "2";
     }
     //0
     if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))) {
@@ -387,7 +404,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize*4, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '.';
+        return ".";
     }
   }
 
@@ -400,7 +417,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize * 5, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '9';
+        return "9";
       }
     //6
     if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))){
@@ -408,7 +425,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize * 5, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '6';
+        return "6";
     }
     //3
     if (((extraY + (boxsize * 3)) >= y) && (y >= (extraY + (boxsize * 2)))){
@@ -416,7 +433,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize * 5, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
-        return '3';
+        return "3";
     }
     //=
     if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))){
@@ -424,7 +441,7 @@ char idbutton(){
         //delay(100);
         while (ts.touched()) {delay(10);};
         tft.drawRoundRect(row1x + boxsize * 5, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_GREEN);
-        return '$';
+        return "Ans";
     }
   }
 
@@ -437,7 +454,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 6, extraY, boxsize, boxsize, 8, ILI9341_BLUE);
-            return '/';
+            return "/";
         }
         //-
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
@@ -445,7 +462,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 6, extraY + boxsize, boxsize, boxsize, 8, ILI9341_BLUE);
-            return 'x';
+            return "x";
         }
         //*
         if (((extraY + (boxsize * 3)) >= y) && (y >= (extraY + (boxsize * 2)))){
@@ -453,7 +470,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 6, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_BLUE);
-            return '-';
+            return "-";
         }
         // /
         if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))) {
@@ -461,7 +478,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 6, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_BLUE);
-            return '+';
+            return "+";
         }
     }
     
@@ -474,7 +491,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 7, extraY, boxsize, boxsize, 8, ILI9341_BLUE);
-            return 'C';
+            return "C";
         }
         //-
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
@@ -482,13 +499,13 @@ char idbutton(){
                 tft.drawRoundRect(row1x + boxsize * 7, extraY + boxsize, boxsize/2, boxsize, 8, ILI9341_GREEN);
                 while (ts.touched()) {delay(10);};
                 tft.drawRoundRect(row1x + boxsize * 7, extraY + boxsize, boxsize/2, boxsize, 8, ILI9341_BLUE);
-                return '(';
+                return "(";
             }
             else{
                 tft.drawRoundRect(row1x + boxsize * 7.5, extraY + boxsize, boxsize/2, boxsize, 8, ILI9341_GREEN);
                 while (ts.touched()) {delay(10);};
                 tft.drawRoundRect(row1x + boxsize * 7.5, extraY + boxsize, boxsize/2, boxsize, 8, ILI9341_BLUE);
-                return ')';
+                return ")";
             }
         }
         //*
@@ -497,7 +514,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 7, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_BLUE);
-            return '<';
+            return "<-";
         }
         // /
         if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))) {
@@ -505,7 +522,7 @@ char idbutton(){
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize * 7, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_BLUE);
-            return '=';
+            return "=";
         }
     }
 }
@@ -550,8 +567,11 @@ void printSerial(char *name, auto &iterable){
         Serial.print(i.c_str());
         Serial.print(" ");
     }
-    Serial.println("");
+    Serial.print("  size: ");
+    Serial.print(iterable.size());
+    Serial.println();
 }
+
 
 string calc_stk(vector<string> formula){
     vector<string> stk; // actually stack
@@ -567,13 +587,13 @@ string calc_stk(vector<string> formula){
     *                  --  -----
     */
     Serial.println("Ready to Calculate");
-    PRINT(formula);
+    PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
     for (string s : formula){
         Serial.print("Processing ");
         Serial.println(s.c_str());
         if (s[0] == '('){
             stk.push_back(s);
-            
+            PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
         }
         else if (s[0] == ')'){
             while (stk.size() && stk.back()[0]!='('){
@@ -581,7 +601,7 @@ string calc_stk(vector<string> formula){
                 stk.pop_back();
             }
             if (stk.size()){
-                if (stk.back()[0]=='(') stk.back();
+                if (stk.back()[0]=='(') stk.pop_back();
             }
         }
         else if (s.length() == 1 && !isdigit(s[0])){
@@ -589,21 +609,20 @@ string calc_stk(vector<string> formula){
                 if (s[0] == op){
                     while (stk.size() && priority(op)<=priority(stk.back()[0])){
                         postfix.push_back(stk.back());
-                        PRINT(postfix);
+                        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
                         //Serial.print("postfix push back ");
                         //Serial.println(stk.back().c_str());
                         stk.pop_back();
-                        PRINT(stk);
+                        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
                     }
                     stk.push_back(s);
-                    PRINT(stk);
-                    
+                    PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
                 }
             }
         }
-        else{
+        else if (s != ""){
             postfix.push_back(s);
-            PRINT(postfix);
+            PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
         }
         
         /*if (s.length() == 1){
@@ -624,8 +643,7 @@ string calc_stk(vector<string> formula){
     while (stk.size()) {
         postfix.push_back(stk.back());
         stk.pop_back();
-        PRINT(postfix);
-        PRINT(stk);
+        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
     }
     /*
     * Calculate postfix
@@ -636,7 +654,8 @@ string calc_stk(vector<string> formula){
     result.num = 0;
     string result_str = "";
     for (auto s : postfix){
-        if (isdigit(s[0]) || (s.length()>2 && s[0] == '-' && isdigit(s[1]))){
+        PRINT(formula);PRINT(postfix);PRINT(stk);Serial.println("\n");
+        if (isdigit(s[0]) || (s.length()>1 && s[0] == '-' && isdigit(s[1]))){
             result.num = atoi(s.c_str());
             //Serial.print("result is ");
             //Serial.print(result);println(result.num);
