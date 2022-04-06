@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 #include <math.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -89,14 +90,16 @@ struct number{
     long int remainder = 0;
     long int divisor = 0;
     bool undefined = false;
+    long int decimal = 0;
+    bool isdecimal = false;
 };
 
 
 String button[4][8] = {
     { "-", "-", "-", "7", "8", "9", "/", "C" },
-    { "4", "5", "n!", "4", "5", "6", "x"},
-    { "1", "2", "^", "1", "2", "3", "-", "<-" },
-    { "0", ".", "", "0", ".", "Ans", "+", "=" }
+    { "sin", "pi", "n!", "4", "5", "6", "x"},
+    { "cos", "e", "^", "1", "2", "3", "-", "<-" },
+    { "tan", "|x|", "sqrt", "0", ".", "Ans", "+", "=" }
 };
 
 //piano tones
@@ -135,7 +138,8 @@ void draw() {
     for (int j=0;j<4;j++){
         for (int i=0;i<8;i++) {
             if (i!=7 || j!=1){
-                tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
+                if (i>2 && i<6) tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
+                else tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_BLUE);
                 tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1)+6*(button[j][i].length()==2), extraY+j*boxsize+9+6*(button[j][i].length()>1));
                 tft.setTextColor(ILI9341_WHITE);
                 tft.setTextSize(3-(button[j][i].length()>1));
@@ -374,34 +378,34 @@ string idbutton(){
     //    if (DEBUG) Serial.println("Row 1  ");
     //7
         if (((extraY + boxsize) >= y) && (y >= extraY)) {
-            tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_RED);
+            tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
-            tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
+            tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_BLUE);
             return "NaN";
         }
-        //4
+        //!
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
-            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize, boxsize, boxsize, 8, ILI9341_RED);
+            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
-            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
+            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize, boxsize, boxsize, 8, ILI9341_BLUE);
             return "!";
         }
-        //1
+        //^
         if (((extraY + (boxsize * 3)) >= y) && (y >= (extraY + (boxsize * 2)))) {
-            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_RED);
+            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
-            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
+            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_BLUE);
             return "^";
         }
-        //C
+        //sqrt
         if (((extraY + (boxsize * 4)) >= y) && (y >= (extraY + (boxsize * 3)))) {
             tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
-            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_RED);
+            tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize * 3, boxsize, boxsize, 8, ILI9341_BLUE);
             return "sqrt(";
         }
     }
@@ -608,41 +612,57 @@ long int factorial(long int n) {
     return (n == 1 || n == 0) ? 1 : n * factorial(n - 1);
 }
 
-number calc(long int num1, long int num2, char op){
+number calc(number num1, number num2, char op){
     number tmp;
     switch (op) {
         case '+':
-            tmp.num = num1 + num2;
+            tmp.num = num1.num + num2.num;
+            if (num1.remainder || num2.remainder){
+                tmp.remainder = num1.remainder*num2.divisor + num2.remainder*num1.divisor;
+                tmp.divisor = num1.divisor*num2.divisor;
+            }
             return tmp;
         case '-':
-            tmp.num = num1 - num2;
+            tmp.num = num1.num - num2.num;
+            if (num1.remainder || num2.remainder){
+                tmp.remainder = num1.remainder*num2.divisor - num2.remainder*num1.divisor;
+                tmp.divisor = num1.divisor*num2.divisor;
+            }
             return tmp;
         case 'x':
-            tmp.num = num1 * num2;
+            // tmp.num = num1.num * num2.num;
+            if (num1.remainder || num2.remainder){
+                tmp.num = num1.num * num2.num;
+                tmp.remainder = num1.num*num1.divisor*num2.remainder+num2.num*num2.divisor*num1.remainder+num1.remainder*num2.remainder;
+                tmp.divisor = num1.divisor*num2.divisor;
+            }
+            else{
+                tmp.num = num1.num * num2.num;
+            }
             return tmp;
         case '/':
-            if (num2 == 0){
+            if (num2.num == 0){
                 tmp.undefined = true;
                 tmp.num = 0;
                 tmp.remainder = 0;
                 tmp.divisor = 0;
             }
             else {
-                tmp.num = num1 / num2;
-                tmp.remainder = num1 % num2;
-                tmp.divisor = num2;
+                tmp.num = num1.num / num2.num;
+                tmp.remainder = num1.num % num2.num;
+                tmp.divisor = num2.num;
             }
             return tmp;
         case '_':
-            tmp.num = num2 * -1;
+            tmp.num = num2.num * -1;
             return tmp;
         case '!':
             if (DEBUG) Serial.println("Factorial");
-            tmp.num = factorial(num2);
+            tmp.num = factorial(num2.num);
             return tmp;
         case '^':
             if (DEBUG) Serial.println("Exponent");
-            tmp.num = pow(num1, num2);
+            tmp.num = pow(num1.num, num2.num);
             return tmp;
     }
 }
@@ -660,6 +680,25 @@ void printSerial(char *name, auto &iterable){
     if (DEBUG) Serial.println();
 }
 
+number myAtoi(const char* str) {
+    number num;
+    int res = 0;
+    int i = 0;
+    for (; !(str[i]=='\0'||str[i]=='+'); ++i)
+        res = res * 10 + str[i] - '0';
+    if (str[i] == '\0') goto finishAtoi;
+    num.num = res;
+    res = 0;
+    for (i=i+1;!(str[i]=='\0'||str[i]=='/'); ++i)
+        res = res * 10 + str[i] - '0';
+    num.remainder = res;
+    res = 0;
+    for (i=i+1;!(str[i]=='\0'); ++i)
+        res = res * 10 + str[i] - '0';
+    num.divisor = res;
+    finishAtoi:
+    return num;
+}
 
 string calc_stk(vector<string> formula){
     vector<string> stk; // actually stack
@@ -680,7 +719,11 @@ string calc_stk(vector<string> formula){
         if (DEBUG) Serial.print("Processing ");
         if (DEBUG) Serial.println(s.c_str());
         if (s[0] == '('){
+            /*string delimiter = "+";
+            string token = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());*/
             stk.push_back(s);
+            
             PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
         }
         else if (s[0] == ')'){
@@ -722,7 +765,7 @@ string calc_stk(vector<string> formula){
     * Calculate postfix
     *
     */
-    long int num1, num2;
+    number num1, num2;
     number result;
     result.num = 0;
     string result_str = "";
@@ -736,16 +779,17 @@ string calc_stk(vector<string> formula){
         else{
             char c = stk.back()[0];
             if (DEBUG) Serial.println("stk fetched");
-            num2 = atoi(stk.back().c_str());
+            num2 = myAtoi(stk.back().c_str());
             stk.pop_back();
             if (DEBUG) Serial.println("stk fetched and popped");
             if (s[0] != '!'){ // single operand operator
-                num1 = atoi(stk.back().c_str());
+                num1 = myAtoi(stk.back().c_str());
                 stk.pop_back();
                 if (DEBUG) Serial.println("stk fetched and popped");
             }
-            else num1 = 0;
+            else num1.num = 0;
             if (DEBUG) Serial.println("calc");
+            // number num1
             result = calc(num1, num2, s[0]);
             if (DEBUG) Serial.print("result in int is ");
             if (DEBUG) Serial.println(result.num);
