@@ -1,0 +1,31 @@
+*FEATURES OF THE COMPLICATED CALCULATOR*
+
+★ BIG NUMBER LAYOUTS
+★ MORE BUTTONS
+★ BACKSPACE SUPPORTED
+
+★ CONVENIENT PARENTHESES
+★ *FRACTIONS* OPERATION
+★ DECIMAL OPERATION
+★ TRIGONOMETRIC FUNCTIONS
+★ FACTORIAL OPERATION
+★ EXPONENT OPERATION
+★ ABSOLUTE VALUE
+★ SQUARE ROOTS
+★ MATH CONSTANTS
+
+Phew! 1000 lines of codes.
+It does infix to postfix converting and postfix expression calculations
+This means it supports multiple operators entering together
+And it comes with a better layout and more understandable buttons
+Also, it supports entering important math constants like pi and e
+if you want to play the tone, just uncomment the code where it says uncomment to play the tone
+
+
+*WHAT WILL BE DONE IN THE FUTURE*
+OVERFLOW PREVENTIONS
+ERRORS CATCHING
+MORE FUNCTIONS using the "SHIFT" & "ALPHA" buttons to trigger
+LOGARITHM
+Continuous calculations
+Equations solving

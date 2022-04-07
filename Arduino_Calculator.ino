@@ -80,7 +80,7 @@ bool equaled = false;
 #define extraY 48+4*8-1
 
 #define PRINT(name) printSerial(#name, (name))
-#define DEBUG true 
+#define DEBUG false 
 
 
 int x, y = 0;
@@ -89,6 +89,7 @@ struct number{
     long double num;
     long int remainder = 0;
     long int divisor = 1;
+    long int whole = 0;
     bool undefined = false;
     // long double decimal = 0;
     bool isdecimal = false;
@@ -137,7 +138,10 @@ void draw() {
 
     for (int j=0;j<4;j++){
         for (int i=0;i<8;i++) {
-            if (i!=7 || j!=1){
+            if (j==0 && i<3){
+                //pass
+            }
+            else if (i!=7 || j!=1){
                 if (i>2 && i<6) tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
                 else tft.drawRoundRect(row1x+i*boxsize, extraY+j*boxsize, boxsize, boxsize, 8, ILI9341_BLUE);
                 tft.setCursor(12+i*boxsize-8*(button[j][i].length()>1)+6*(button[j][i].length()==2), extraY+j*boxsize+9+6*(button[j][i].length()>1));
@@ -166,6 +170,16 @@ void draw() {
     //tft.drawRoundRect(row1x + boxsize * 7.5, extraY+boxsize, boxsize/2, boxsize, 8, ILI9341_BLUE);
     tft.drawRoundRect(row1x + boxsize * 7, extraY+boxsize*2, boxsize, boxsize, 8, ILI9341_BLUE);
     tft.drawRoundRect(row1x + boxsize * 7, extraY+boxsize*3, boxsize, boxsize, 8, ILI9341_GREEN);
+    tft.drawRoundRect(row1x, extraY, boxsize*1.5, boxsize, 8, ILI9341_ORANGE);
+    tft.drawRoundRect(row1x+1.5*boxsize, extraY, boxsize*1.5, boxsize, 8, ILI9341_PINK);
+    tft.setTextSize(2);
+    tft.setTextColor(ILI9341_ORANGE);
+    tft.setCursor(row1x, extraY+13);
+    tft.print("SHIFT");
+    tft.setTextColor(ILI9341_PINK);
+    tft.setCursor(row1x+ boxsize*1.5, extraY+13);
+    tft.print("ALPHA");
+    tft.setTextColor(ILI9341_WHITE);
     /*tft.drawRoundRect(row1x, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
     tft.drawRoundRect(row1x, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
     tft.drawRoundRect(row1x, extraY + boxsize * 2, boxsize, boxsize, 8, ILI9341_WHITE);
@@ -196,6 +210,15 @@ void draw() {
 void drawFormulaScreen(){
     tft.fillRoundRect(0, 0, 320, extraY, 8, ILI9341_BLACK);
     tft.drawRoundRect(0, 0, 320, extraY, 8, ILI9341_ORANGE);
+}
+
+bool aredigits(char key[]){
+    for(int i = 0; i < strlen(key); i++) {
+        if(isdigit(key[i])==0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void setup(){
@@ -263,12 +286,13 @@ void loop(){
                 cur_key = "";
             }
             // Handling negative numbers at first
-            if ((formula.size()==0 || formula.back()=="(") && (lastchar == '-' || lastchar == '+')) {
+            if ((formula.size()==0 || formula.back()=="(" || (formula.size()==1 && formula.back()=="")) && (lastchar == '-' || lastchar == '+' || lastchar=='_')) {
                 operation = ' ';
                 cur_key += lastchar;
                 tft.setTextSize(3);
                 tft.print(lastchar);
                 onScreenStr += lastchar;
+                if (DEBUG) Serial.print("pressed negative");
             }
             else{
                 operation = lastchar;
@@ -314,6 +338,19 @@ void loop(){
                 if (DEBUG) Serial.println("pressed Equal");
                 answer_str = calc_stk(formula);
                 //answer = calc_stk(formula);
+                if (ceil(atof(answer_str.c_str())) == atof(answer_str.c_str())){ // is integer
+                    //answer_str = to_string(atoi(answer_str.c_str())); 
+                    while (answer_str.size() && (answer_str.back()=='0')){
+                        answer_str.pop_back();
+                    }
+                    if (answer_str.back()=='.') answer_str.pop_back();
+                }
+                else {
+                    answer_str.pop_back();
+                    while (answer_str.size() && answer_str.back()=='0'){
+                        answer_str.pop_back();
+                    }
+                }
                 if (DEBUG) Serial.print("answer: ");
                 if (DEBUG) Serial.println(answer_str.c_str());
                 //if (DEBUG) Serial.println(answer);
@@ -466,13 +503,13 @@ char idbutton(){
     if ((x>= boxsize*0) && (x <= boxsize * 1)){
     //    if (DEBUG) Serial.println("Row 1  ");
     //7
-        if (((extraY + boxsize) >= y) && (y >= extraY)) {
+        /*if (((extraY + boxsize) >= y) && (y >= extraY)) {
             tft.drawRoundRect(row1x, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x , extraY, boxsize, boxsize, 8, ILI9341_BLUE);
             return 'q';
-        }
+        }*/
         //!
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
             tft.drawRoundRect(row1x, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
@@ -502,13 +539,13 @@ char idbutton(){
     if ((x>= boxsize) && (x <= boxsize * 2)){
     //    if (DEBUG) Serial.println("Row 1  ");
     //7
-        if (((extraY + boxsize) >= y) && (y >= extraY)) {
+        /*if (((extraY + boxsize) >= y) && (y >= extraY)) {
             tft.drawRoundRect(row1x + boxsize, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize, extraY, boxsize, boxsize, 8, ILI9341_BLUE);
             return 'q';
-        }
+        }*/
         //!
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
             tft.drawRoundRect(row1x + boxsize, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
@@ -538,13 +575,13 @@ char idbutton(){
     if ((x>= boxsize * 2) && (x <= boxsize * 3)){
     //    if (DEBUG) Serial.println("Row 1  ");
     //7
-        if (((extraY + boxsize) >= y) && (y >= extraY)) {
+        /*if (((extraY + boxsize) >= y) && (y >= extraY)) {
             tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_WHITE);
             //delay(100);
             while (ts.touched()) {delay(10);};
             tft.drawRoundRect(row1x + boxsize*2, extraY, boxsize, boxsize, 8, ILI9341_BLUE);
             return 'q';
-        }
+        }*/
         //!
         if (((extraY + (boxsize * 2)) >= y) && (y >= (extraY + boxsize))) {
             tft.drawRoundRect(row1x + boxsize*2, extraY + boxsize, boxsize, boxsize, 8, ILI9341_WHITE);
@@ -910,7 +947,17 @@ number calc(number num1, number num2, char op){
                 tmp.num = 0;
             }
             else {
-                tmp.num = num1.num / num2.num;
+                if ((ceil(num2.num) == num2.num) && (ceil(num1.num) == num1.num)){
+                    tmp.num = (int)num1.num / (int)num2.num;
+                    tmp.remainder = (int)num1.num % (int)num2.num;
+                    tmp.divisor = (int) num2.num;
+                }
+                else {
+                    tmp.num = num1.num / num2.num;
+                    tmp.remainder = 0;
+                    tmp.divisor = 1;
+                }
+                
             }
             return tmp;
         case '_':
@@ -942,17 +989,20 @@ number calc(number num1, number num2, char op){
             tmp.isdecimal = true;
             return tmp;
         case 's':
-            if (DEBUG) Serial.println("sin");
+            if (DEBUG) Serial.print("sin");
+            if (DEBUG) Serial.println(to_string(num2.num).c_str());
             tmp.num = sin(num2.num);
             tmp.isdecimal = true;
             return tmp;
         case 'c':
-            if (DEBUG) Serial.println("cos");
+            if (DEBUG) Serial.print("cos");
+            if (DEBUG) Serial.println(to_string(num2.num).c_str());
             tmp.num = cos(num2.num);
             tmp.isdecimal = true;
             return tmp;
         case 't':
-            if (DEBUG) Serial.println("tan");
+            if (DEBUG) Serial.print("tan");
+            if (DEBUG) Serial.println(to_string(num2.num).c_str());
             tmp.num = tan(num2.num);
             tmp.isdecimal = true;
             return tmp;
@@ -1072,6 +1122,8 @@ string calc_stk(vector<string> formula){
     double tmpf;
     string result_str = "";
     for (auto s : postfix){
+        number result;
+        result.num = 0;
         PRINT(formula);PRINT(postfix);PRINT(stk);if (DEBUG) Serial.println("\n");
         // is number
         if (isdigit(s[0]) || (s.length()>1 && s[0] == '-' && isdigit(s[1]))){
@@ -1118,7 +1170,8 @@ string calc_stk(vector<string> formula){
             stk.push_back(result_str);
             if (DEBUG) Serial.println("isdecimal");
         }
-        else *//*if (result.remainder){ // fractions reduction
+        else */
+        if (result.remainder){ // fractions reduction
             long gcd_ = gcd(result.remainder, result.divisor);
             if (gcd_ != 1){
                 result.remainder /= gcd_;
@@ -1132,20 +1185,23 @@ string calc_stk(vector<string> formula){
             }
             if (result.num == 0)
                 result_str = to_string(result.remainder) + "/" + to_string(result.divisor);
-            else
-                result_str = to_string(result.num) + " " + to_string(result.remainder) + "/" + to_string(result.divisor);
+            else{
+                result.whole = result.num;
+                result_str = to_string(result.whole) + " " + to_string(result.remainder) + "/" + to_string(result.divisor);
+            }
+            //result_str = to_string(result.num) + " " + to_string(result.remainder) + "/" + to_string(result.divisor);
             //stk.push_back(to_string(result.num) + "+" + to_string(result.remainder) + "/" + to_string(result.divisor));
-            stk.push_back(to_string(result.num+(double)result.remainder/(double)result.divisor));
+            stk.push_back(to_string(result.whole+(double)result.remainder/(double)result.divisor));
             if (DEBUG) Serial.println("isfraction");
         }
-        else {*/
+        else {
             result_str = to_string(result.num);
             stk.push_back(result_str);
             //if (DEBUG) Serial.println("isint");
-            //}
+            }
         // result_str = to_string(result.num)+" "+to_string(result.remainder)+"/"+to_string(result.divisor);
         
     }
     if (result.undefined) return "undefined";
-    return result_str;
+    else return result_str;
 }
